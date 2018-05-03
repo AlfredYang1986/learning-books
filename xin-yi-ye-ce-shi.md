@@ -57,9 +57,17 @@ Another reason to prefer the nested approach could be to chunk uyp your architec
 
 ## Communication in Terms of Business Concepts
 
+The changes we implement to our system are often about changes the business wants to make to how the system behaves. We are changing functionality -- capabilities -- that are exposed to our customers. If our systems are decomposed along the bounded contexts that represent our domain, the changes we want to make are more likely to e isolated to one, single microservice boundary. Thais reduces the number of places we need to make a change, and allows us to deploy that change quickly.
 
+It's also important to think of the communication between these microservices in terms of the same business concepts. The modeling of your software after your business domain shouldn't stop at the idea of bounded contexts. The same terms and ideas that are shared between parts of your organization should be reflected in your interfaces. It can be useful to think of forms being sent between these microservices, much as forms are sent around an organization. \(JSON API\) The same idea.
 
+## The Technical Boundary
 
+It can be useful to look at what can go wrong when services are modeled incorrectly. Making decisions to model service boundaries along technical seams isn't always wrong. I have certainly seen this make lots of sense when an organization is looking to achieve certain performance objectives. However, it should be your secondary driver for finding these seams, not your primary one.
+
+## Summary
+
+Bounded contexts are a vital tool in helping us find these seams,  and by aligning our microservices to these boundaries we ensure that the resulting system has every chance of keeping those virtues intact. 
 
 
 
