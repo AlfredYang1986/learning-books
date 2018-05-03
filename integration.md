@@ -77,5 +77,85 @@ Remote procedure calls refers to the technique of making a local call and having
 
 Many of these technologies are binary in nature, while SOAP uses XML for its message formats. Some implementations are tied to a specific networking protocol, whereas others might allow you to use different types of networking protocols, which themselves can provide additional features.
 
+Those RPC implementations that allow you to generate client and server stubs help you get started very, very fast. I can be sending content over a network boundary in no time at all. This is often one of the main selling points of RPC: its ease of use. The fact that I can just make a normal method call and theoretically ignore the rest is a huge boon.
 
+Some RPC implementation, though, do come with some downsides that can cause issues. These issues aren't always apparent initially, but nonetheless they can be severe enough to outweigh the benefits of being so easy to get up and running quickly.
+
+### Technology Coupling
+
+Some RPC mechanisms, like Java RMI, are heavily tied to specific platform, which can limit which technology can be used in the client and server. Thrift and protocol buffers have an impressive amount of support for alternative languages, which can reduce this downside somewhat, but be aware that sometimes RPC technology comes with restrictions on interoperability.
+
+In a way, this technology coupling can be a form of exposing internal technical implementation details.
+
+### Local Calls Are Not Like Remote Calls
+
+ The core idea of RPC is to hide the complexity of a remote call. May implementations of RPC, thought, hide too much. The drive in some form of RPC to make remote method calls look like local method calls hides the fact that these two things are very different. I can make large numbers of local, in-process calls without worrying overly about the performance. With RPC, through, the cost of marshaling and un-marshaling payloads can be significant, not to mention the time taken to send things over the network. This means you need to think differently about API design for remote interfaces versus local interfaces. Just taking a local API and trying to make it a service boundary without any more thought is likely to get you in trouble. In some of the worst examples, developers may be using remote call without knowing it if the abstraction is overly opaque.
+
+Famously, the first of the fallacies of distributed computing is "The network is reliable". Networks aren't reliable. They can and will fail, even if your client and the server you are speaking to are fine. They can fail fast, they can fail slow, and they can even malform your packets. You should assume that your networks are plagued with malevolent entities ready to unleash their ire on a whim. Therefore, the failure modes you can expect are different. A failure could be caused by the remote server returning an error, or by you making a bad call. Can you tell the difference, and if so, can you do anything about it ? And what do you do when the remote server just start responding slowly?
+
+### Brittleness
+
+Some of the most popular implementations of RPC can lead to some nasty forms of brittleness, Java's RMI being a very good example. Let's consider a very simple Java interface that we have decided to make a remote API for our customer service.
+
+The key challenge with any RPC mechanism that promotes the use of binary stub generation: you don't get to separate client and server deployments. If you use this technology, lock-step releases may be in your future.
+
+In practice, object used as part of binary serialization across the wire can be thought of as expand-only types. This brittleness results in the types being exposed over the wire and becoming a mass of fields, some of which are no longer used but can't be safely removed.
+
+### Is RPC Terrible?
+
+Despite its shortcomings, I wouldn't go so far as to call RCP terrible. Some of the common implementations that I have encountered can lead to the sort of problems I have outlined here. Due to the challenges of using RMI, I would certainly give that technology a wide berth. Many operations fall quite nicely into the RPC-based model, and more modern mechanisms like protocol buffers or Thrift mitigate some of sins of the past by avoiding the need for lock-step releases of client and server code.
+
+Just be aware of some of the potential pitfalls associated with RPC, if you're going to pick this model. Don't abstract your remote calls to the point where the network is completely hidden, and ensure that you can evolve the server interface without having to insist on lock-step upgrades for clients. Finding the right balance for your client code is important. Make sure your clients aren't oblivious to the fact that a net work call is going to be made. Client libraries are often used in the context of RPC, and if not structured right they can be problematic. We'll talk more about them shortly.
+
+Compared to database integration, RPC is certainly an improvement when we think about options for request/response collaboration.
+
+## Rest
+
+Representational State Transfer \(REST\) is an architectural style inspired by the Web. There are may principles and constraints behind the REST style, but we are going to focus on those that really help us when we face integration challenges in a microservices world, and when we're looking for an alternative style to RPC for our service interfaces.
+
+Most important is the concept of resources. You can think of a resource as a thing that the service itself knows about, like a Customer. The server creates different representations of this on request. How a resource is shown externally is completely decoupled from how it is stored internally. A client might ask for a JSON representation, it can then make requests to change it, and the server may or may not comply with them.
+
+These are many different styles of REST, and I touch only briefly on them here. I strongly recommend you take a look at the Richardson Maturity Model, where the different styles of REST are compared.
+
+### REST and HTTP
+
+HTTP itself defines some useful capabilities that play very well with the REST style. Conceptually, there is one endpoint in the form of a Customer resource in these cases, and the operations we can carry out upon it are baked into the HTTP protocol.
+
+### Hypermedia As the Engine of Application State
+
+Another principle introduced in REST that can help us avoid the coupling between client and server is the concept of hypermedia as the engine of application state. This is fairly dense wording and a fairly interesting concept.
+
+Hypermedia is a concept whereby a piece of content contains links to various other pieces of content in a variety of formats. This should be pretty familiar to you, as it's what the average web page does: you follow links, which are a form ob hypermedia controls, to see related content.  
+
+Using these controls to decouple the client and server yield significant benefits over time that greatly offset the small increase in the time it takes to get these protocols up and running. By following the links, the client gets to progressively discover the API, which can be a really handy capability when we are implementing new clients.
+
+One of the downsides is that this navigation of controls can be quite chatty, as the client needs to follow links to find the operation it wants to perform. Ultimately, this is a trade-off. I would suggest you start with having your clients navigate these controls first, then optimize later if necessary. Remember that we have a large amount of help out of the box been well documented before, so I don't need to expand upon them here. Also note that a lot of these approaches were developed to create distributed hypertext systems, and not all of them fit! Sometimes you'll find yourself just wanting good old-fashioned RPC.
+
+Personally, I am a fan of using links to allow consumers to navigate API endpoints. The benefits of progressive discovery of the API and reduced coupling can be significant. However, it is clear that not everyone is sold, as I don't see it being used anywhere near as much as I would like. I think a large part of this is that there is some initial upfront work required, but the rewards often come later.
+
+### JSON, XML, or Something Else?
+
+The use of standard textual formats gives clients a lot of flexibility as to how they consume resources, and REST over HTTP lets us use a variety of formats. 
+
+The fact is JSON is a much simpler format means that consumption is also easier. Some proponents also cite its relative compactness when compared to XML as another winning factor, although this isn't often a real-world issue.
+
+JSON does have some downsides, though. XML defines the link control we used earlier as a hypermedia control. The JSON standard doesn't define anything similar, so in-house styles are frequently used to shoe-horn this concept in. 
+
+Personally, though, I am still a fan of XML. Some of the tool support is better. 
+
+### Beware Too much Convenience
+
+Some of these tools trade off too much in terms of short-term gain for long-term pain; in trying to get you going fast, they can encourage some bad behaviors. For example, some frameworks actually make it very easy to simply take database representations of objects, deserialize them into in-process object, and then directly expose these externally. The inherent coupling that this setup promotes will in most cases cause far more pain than the effort required to properly decouple this concepts.
+
+There is a more general problem at play here. How we decide to store our data, and how we expose it to our consumers, can easily dominate our thinking. One pattern I saw used effectively by one of our teams was to delay the implementation of proper persistence for the microservice, until the interface had stabilized enough. For an interim period, entities were just persisted in a file on local disk, which is obviously not a suitable long-term solution. This ensured that how the consumers wanted to use the service drove the design and implementation decisions.  The rationale given, which was borne out in the results, was that it is too easy for the way we store domain entities in a backing store to overtly influence the models we send over the wire to collaborators. One of the downsides with this approach is that we are deferring the work required to wire up our data store. I think for new service boundaries, however, this is an acceptable trade-off.
+
+### Downsides to REST Over HTTP
+
+In terms of ease of consumption, you cannot easily generate a client stub for you REST over HTTP application protocol lick you can with RPC. Sure, the fact that HTTP is being used means that you get to take advantage of all the excellent HTTP client libraries out there, but if you want to implement and use hypermedia controls as a client you are pretty much on your own. Personally, I think client libraries could do much better at this than they do, and they are certainly better now than in the past， but I have seen this apparent increased complexity result in people backsliding into smuggling RPC over HTTP or building shared client libraries.
+
+A more minor point is that some web server frameworks don't actually support all the HTTP verbs well. That means that it might be easy for you to create a handler for GET or POST requests, but you may have to jump through hoops to get PUT or DELETE requests to work. 
+
+Performance may also be an issue. REST over HTTP payloads can actually be more compact than SOAP because it supports alternative formats like JSON or even binary, but it will still be nowhere near as lean a binary protocol as Thrift might be. The overhead of HTTP for each request may also be a concern for low-latency requirements.
+
+HTTP, while it can be suited well to large volumes of traffic, isn't great for low-latency communications when compared to alternative protocols that are built on top of Transmission Control Protocol\(TCP\) or other networking technology. Despite the name, WebSocket, has very little  to do with the Web. After the initial HTTP handshake, it's just a TCP connection between client and server, but it can be a much more efficient way for you to stream data for a browser. If this is something you're interested in, note that you aren't really using much of HTTP, let alone anything to do the REST.
 
