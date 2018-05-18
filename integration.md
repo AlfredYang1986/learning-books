@@ -159,3 +159,13 @@ Performance may also be an issue. REST over HTTP payloads can actually be more c
 
 HTTP, while it can be suited well to large volumes of traffic, isn't great for low-latency communications when compared to alternative protocols that are built on top of Transmission Control Protocol\(TCP\) or other networking technology. Despite the name, WebSocket, has very little  to do with the Web. After the initial HTTP handshake, it's just a TCP connection between client and server, but it can be a much more efficient way for you to stream data for a browser. If this is something you're interested in, note that you aren't really using much of HTTP, let alone anything to do the REST.
 
+## Implementing Asynchronous Event-Based Collaboration
+
+### Technology Choices
+
+There are two main parts we need to consider here:: away for our micro-services to emit events, and a way for our consumers to find out those events have happened.
+
+Traditionally, message brokers like RabbitMQ try to handle both problems. Producers use an API to publish an event to the broker. The broker handles subscriptions, allowing consumers to be informed when an event arrivers. These brokers can even handle the state of consumers, for example by helping keep track of what messages they have seen before. These systems are normally designed to the development process, because it is another system you may need to run to develop and test your services. Additional machines and expertise may also be required to keep this infrastructure up and running. But once it does, it can be an incredibly effective way to implement loosely coupled, event-driven architectures.
+
+
+
