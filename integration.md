@@ -167,5 +167,19 @@ There are two main parts we need to consider here:: away for our micro-services 
 
 Traditionally, message brokers like RabbitMQ try to handle both problems. Producers use an API to publish an event to the broker. The broker handles subscriptions, allowing consumers to be informed when an event arrivers. These brokers can even handle the state of consumers, for example by helping keep track of what messages they have seen before. These systems are normally designed to the development process, because it is another system you may need to run to develop and test your services. Additional machines and expertise may also be required to keep this infrastructure up and running. But once it does, it can be an incredibly effective way to implement loosely coupled, event-driven architectures.
 
+Do be wary, though, about the world of middleware, of which the message broker is just a small part. Queues in and of themselves are perfectly sensible, useful things. However, vendors tend to want to package lots of software with them, which can lead to more and more smarts being pushed into the middleware, as evidenced by things like the enterprise service bus. Make sure you know what you're getting: keep your middleware dumb, and keep the smarts in the endpoints.
+
+Another approach is try to use HTTP as a way of propagating events. ATOM is a REST-compliant specification that defines semantics \(among other things\) for publishing feeds of resources. Many client libraries exist that allow us to create and consume these feeds.So our customer service could just publish an event to such a feed when our customer service changes. Our consumers just poll the feed, looking for changes. On one hand, the fact that we can reuse the existing ATOM specification and any associated libraries is useful, and we know that HTTP handles scale very well. However, HTTP is new good at low latency \(where some message broker excel\),  and we still need to deal with the fact that the consumers need to keep track of what messages they have seen and manage their own polling schedule.
+
+### Complexities of  Asynchronous Architectures
+
+Event-driven architectures seem to lead to significantly more decoupled, scalable systems. And they can. But these programming styles do lead to an increase in complexity. This isn't just the complexity required to manage publishing and subscribing to messages as we just discussed, but also in the other problems we might face. For example, when considering long-running async request/response, we have to think about what to do when the response comes back. Does it come back to the same node that initiated the request? If so, what if that node is down? if not, do I need to store information somewhere so I can react accordingly? Short-lived async can be easier to manage if you've got the right APIs, but even so, it is a different way of thinking for programmers who are accustomed to intra-process synchronous message calls.
+
+The associated complexity with event-driven architectures and asynchronous programming in general leads me to believe that you should be cautious in how eagerly you start adopting these ideas. Ensure you have good monitoring in place, and strongly consider the use of correlation IDs, which allow you to trace requests across process boundaries.
+
+I also strongly recommend Enterprise Integration Patterns, which contains a lot more detail on the different programming patterns that you may need to consider in this space.
+
+## Services as State Machines
+
 
 
