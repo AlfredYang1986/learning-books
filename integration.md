@@ -181,5 +181,19 @@ I also strongly recommend Enterprise Integration Patterns, which contains a lot 
 
 ## Services as State Machines
 
+Whether you choose to become a REST ninja, or stick with an RPC-based mechanism like SOAP, the core concept of the service as a state machine is powerful. We've spoken before \(probably ad nauseum by this point\) about our services being fashioned around bounded contexts. Our customer microservice owns all logic associated with behavior in this context.
 
+When a consumer wants to change a customer, it sends an appropriate request to the customer service. The customer service, based on its logic, gets to decide if it accepts that request or not. Our customer service controls all lifecycle events associated with the customer itself. We want to avoid dumb, anemic services that are little more than CRUD wrappers. If the decision about what changes are allowed to be made to a customer leak out of the customer service itself, we are losing cohesion.
+
+Having the lifecycle of key domain concepts explicitly modeled like this is pretty powerful. Not only do we have one place to deal with collisions of state \(e.g. someone trying to update a customer that has already been removed\), but we also have a place to attach behavior based on those state changes.
+
+I still think that REST over HTTP makes for a much more sensible integration technology than many others, bus whatever you pick, keep this idea in mind.
+
+## Reactive Extensions
+
+Reactive extensions, often shortened to Rx, are mechanism to compose the results of multiple calls together and run operations on them. The calls themselves could be blocking or nonblocking calls. At its heart, Rx inverts traditional flows. Rather than asking for some data, then performing operations on it, you observe the outcome of an operation and react when something changes. Some implementations of Rx allow you to perform functions on these observables, such as RxJava, which allows traditional functions like map or filter to be used.
+
+The various Rx implementations have found a very happy home in distributed systems. They allow us to abstract out the details of how calls are made, and reason about things more easily. I observe the result of a call to a downstream service. I don't care if it was a blocking or nonblocking call, I just wait for the response and react. The beauty is that I can compose multiple calls together, making handling concurrent calls to downstream services much easier.
+
+As you find yourself making more service calls, especailly when making multiple call to perform a single operation, take a look at the reactive extensions for your chosen technology stack. You may be surprised how much simpler your life can become.
 
