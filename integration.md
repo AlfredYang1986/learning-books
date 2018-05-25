@@ -197,3 +197,41 @@ The various Rx implementations have found a very happy home in distributed syste
 
 As you find yourself making more service calls, especailly when making multiple call to perform a single operation, take a look at the reactive extensions for your chosen technology stack. You may be surprised how much simpler your life can become.
 
+## DRY and the Perils of Code Reuse in a Microservice World
+
+One of the acronyms we developers hear a lot is DRY: don't repeat yourself. Though its definition is sometimes simplified as trying to avoid duplicating code, DRY more accurately means that we want to avoid duplication our system behavior and knowledge. This is very sensible advice in general. Having lots of lines of code that do the same thing makes your codebase larger then needed, and therefore harder to reason about. When you want to change behavior, and that behavior is duplicated in many parts of your system, it is easy to forget everywhere you need to make a change, which can lead to bugs. So using DRY as a mantra, in general, makes sense.
+
+DRY is what leads us to create code that can be reused. We pull duplicated code into abstractions that we can then call from multiple places. Perhaps we go as far as making a shared library that we can use everywhere! This approach, however, can be deceptively dangerous in a microservice architecture.
+
+One of the things we want to avoid at all costs is overly coupling a microservice and consumers such that any small change to the microservice itself can cause unnecessary changes to the consumer. Sometimes, however, the use of shared code can create this very coupling. For example, at one client we had a library of common domain objects that represented the core entities in use in our system. This library was used by all the services we had. But when a change was made to one of them, all services had to be updated. Our system communicated via message queues, which also had to be drained of their now invalid contents, and woe betide you if you forget.
+
+if your use of shared code ever leaks outside your service boundary, you have introduced a potential form of coupling. Using common code like logging libraries is fine, as they are internal concepts that are invisible to the outside world. 
+
+My general rule of thumb: don't violate DRY within a microservice, but be relaxed about violating DRY across all services. The evils of too much coupling between services are far worse than the problems caused by code duplication. There is one specific use case worth exploring further, though.
+
+### Client Libraries
+
+I've spoken to more than one team who has insisted that creating client libraries for your services is an essential part of creating services in the first place. The problem, of course, is that if the same people create both the server API and the client API, there is the danger that logic that should exist on the server starts leaking into the client. I should know: I've done this myself.
+
+The problem, of course, is that if the same people create both the server API and the client API, there is the danger that logic that should exist on the server starts leaking into the client. I should know: I've done this myself. The more logic that creeps into the client, library, the more cohesion starts to break down, and you find yourself having to change multiple clients to roll out fixed to your server. You also limit technology choices, especially if you mandate that the client library has to be used.
+
+A model for client libraries I like is the one for Amazon Web Services \(AWS\). The underlying SOAP or REST web service calls can be make directly, but everyone ends up using just one of the various software development kits \(SDKs\) that exist, which provide abstractions over the underlying API. These SDKs, though, are written by the community or AWS people other than those who work on the API itself. This degree of separation seems to work, and avoids some of the pitfalls of clients libraries. Part of the reason this works so well is that the client is in charge of when the upgrade happens. If you go down the path of client libraries yourself, make sure this is the case.
+
+If the client library approach is something you're thinking about, it can be important to separate out client code to handle the underlying transport protocol, which can deal with things like service discovery and failure, from things related to the destination service itself. Decide whether or not you are going to insist on the client library being used, or if you'll allow people using different technology stacks to make calls to the underlying API. And finally, make sure that the clients are in charge of when to upgrade their client libraries: we need to ensure we maintain the ability to release our services independently of each other!
+
+## Access by Reference
+
+One consideration I want to touch on is how we pass around information about our domain entities. We need to embrace the idea that a microservice will encompass the lifecycle of our core domain entities, like the Customer. We've already talked about the importance of the logic associated with changing this Customer being held in the customer service, and that if we want to change it we have to issue a request to the customer service. But it also follows that we should consider the customer service as being the source of truth for Customers.
+
+When we retrieve a given Customer resource from the customer service, we get to see what that resource looked like when we made the request. It is possible that after we requested that Customer resource, something else has changed it. What we have in effect is a memory of what the Customer resource once looked like. The longer we hold on to this memory, the higher the chance that this memory will be false. Of course, if we avoid requesting data more than we need to, our systems can become much more efficient.
+
+Sometimes this memory is good enough. Other times you need to know if it has changed. So whether you decide to pass around a memory of what an entity once looked like, make sure you also include a reference to the original resource so that the new state can be retrieved.
+
+A great counterpoint to this emerges when we consider event-based collaboration. With events, we're saying this happened, but we need to know what happened. If we're receiving updates due to a Customer resource changing, for example, it could be valuable to us to know what the Customer resource changing.
+
+There are other trade-offs to be made here, of course, when we're accessing by reference. If we always go to the customer service to look at the information associated with a given Customer, the load on the customer service can be too great. If we provide additional information when the resource is retrieved, letting us know at what time the resource was in the given state and perhaps how long we can consider this information to be fresh, then we can do a lot with caching to reduce load. HTTP gives us much of this support out of the box with a wide variety of cache controls, some of which we'll discuss in more detail.
+
+Another problem is that some of our services might not need to know about the whole Customer resource, and by insisting that they go look it up we are potentially increasing coupling. It could be argued, for example, that our email service should be more dumb, and that we should just send it the email address and name of the customer. 
+
+
+
