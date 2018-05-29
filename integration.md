@@ -275,3 +275,43 @@ Another versioning solution often cited is to have different versions of the ser
 
 Coexisting concurrent service versions for a short period of time can make perfect sense, especially when you're doing things like blue/green deployments or canary releases. In this situations, we may be coexisting versions only for a few minutes or perhaps hours, and normally will have only two different versions of the service present at the same time. This longer it takes for you to get consumers upgraded to the newer version and released, the more you should look to coexist different endpoints in the same microservice rather than coexist entirely different versions. I remain unconvinced that this work is worthwhile for the average project.
 
+## User Interfaces
+
+In the past, when I first started computing, we were mostly talking about big, fat clients that ran on our desktops. I spent many hours with Motif and then Swing trying to make my software as nice to use as possible. Often these systems were just for the creation and manipulation of local files, but many of them had a server-side component. My first job at ThoughtWorks involved creating a Swing-based electronic point-of-sale system that was just part of a large number of moving parts, most of which were on the server.
+
+Then came the Web. We started thinking of our UIs as being thin instead, with more logic on the server side. In the beginning, our server-side programs rendered the entire page and sent it to the client browser, which did very little. Any interactions were handled on the server side, via GETs and POSTs triggered by the user clicking on links or filling in forms. Over time, JavaScript became a more popular option to add dynamic behavior to the browser-based UI, and some applications could new be argued to be as fat as the old desktop clients.
+
+### Toward Digital
+
+Over the last couple of years, organizations have started to move away from thinking that web or mobile should be treated differently; they are instead thinking about digital more holistically. What is the best way for our customers to use the services we offer? And what does that do to our system architecture? The understanding that we cannot predict exactly how a customer might end up interacting with our company has driven adoption of more granular APIs. like those delivered by microservices. By combining the capabilities our services expose in different ways, we  can curate different experiences for our customers on their desktop application, mobile device, wearable device, or even in physical form if they visit our brick-and-mortar store.
+
+### Constraints
+
+Constraints are the different forms in which our users interact with our system. On a desktop web application, for example, we consider constraints such as what browser visitors are using, or their resolution. But mobile has brought a whole host of new constraints. The way our mobile applications communicate with the server can have an impact. It isn't just about pure bandwidth concerns, where the limitations of mobile networks can play a part. Different sorts of interactions can drain battery life, leaking to some cross customers.
+
+The nature of interactions changes, too. I can't easily right-click on a tablet. On a mobile phone, I may want to design my interface to be used mostly on-handed, with most operations being controlled by a thumb.Elsewhere, I might allow people to interact with services via SMS in places where bandwidth is at a premium ---- the use of SMS as an interface is huge in the global south, for example.
+
+So, although our core services -- our core offering --might be the same, we need a way to adapt them for the different constraints that exist for each type of interface. When we look at different styles of user interface composition, we need to ensure that they address this challenge.
+
+### API Composition
+
+Assuming that our services already speak XML or JSON to each other via HTTP, an obvious option available to us is to have our user interface interact directly with these APIs. A web-based UI could use JavaScript GET requests to retrieve data, or POST requests to change it. Even for native mobile applications, initiating HTTP communications is fairly straightforward. The UI would then need to create the various components that make up the interface, handling synchronization of state and the like with server. If we were using a binary protocol for service-service communication, this would be more difficult for web-based clients, but could the fine for native mobile devices.
+
+There are a couple of downsides with this approach. First, we have little ability to tailor the responses for different sorts of devices.  example, when I retrieve a customer record, do I need to pull back all the same data for a mobile shop as I do for a helpdesk application? One solution to this approach is to allow consumers to specify what fields to pull back when they make a request, but this assumes that each service supports this form of interaction.
+
+Another key question: who creates the user interface? The people who look after the services are removed from how their services are surfaced to the users ---- for example, if another team is creating the UI, we could be drifting back into the bad old days of layered architecture where making even small changes requires change requests to multiple teams.
+
+This communication could also be fairly chatty. Opening lots of calls directly to services can be quite intensive for mobile devices, and could be a very inefficient use of a customer's mobile plan! Having an API gateway can help here, as you could expose call that aggregate multiple underlying calls, although that it self can have some downsides that we'll explore shortly.
+
+### UI Fragment Composition
+
+Rather than having our UI make API calls and map everything back to UI controls,  we could have our services provide parts of the UI directly, and then just pull these fragments in to create a UI. 
+
+A variation of this approach that can work well is to assemble a series of coarser-grained parts of a UI. So rather than creating small widgets, you are assembling entire panes of a thick client application, or perhaps a set of pages for a website.
+
+These coarser-grained fragments are served up  from server-side apps that are in turn making the appropriate API calls. This model works best wehn the fragments align well to team ownership. For example, perhaps the team that looks after order management in the music shop serves up all the pages associated with order management.
+
+You still need some sort of assembly layer to pull these parts together. This could be as simple as some server-side templating, or, where each set of pages comes from a different app, perhaps you'll need some smart URI routing.
+
+
+
