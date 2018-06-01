@@ -313,5 +313,25 @@ These coarser-grained fragments are served up  from server-side apps that are in
 
 You still need some sort of assembly layer to pull these parts together. This could be as simple as some server-side templating, or, where each set of pages comes from a different app, perhaps you'll need some smart URI routing.
 
+One of the key advantages of this approach is that the same team that makes changes to the services can also be in charge of making changes to those parts of the UI. I t allows us to get changes out faster. But there are some problems with this approach.
 
+First, ensuring consistency of the user experience is something we need to address. Users want to have a seamless experience, not to feel that different pars of the interface work in different ways, or present a different design language. There are techniques to avoid this problem, though, such as living style guides, where assets like HTML components, CSS and images can be shared to help give some level of consistency.
+
+Another problem is harder to deal with. What happens with native applications or thick clients? We can't serve up UI components. We could use a hybrid approach and use native applications to serve up HTML components, but this approach has been shown time and again to have downsides. So if you need a native experience, we will have to fall back to an approach where the frontend application makes API calls and handles the UI itself. But even if we consider web-only UIs, we still may want very different treatments for different types of devices. Building responsive components can help, of course.
+
+There is one key problem with this approach that I'm not sure can be solved. Sometimes the capabilities offered by a service do not fit neatly into a widget or a page. Sure, I might want to surface recommendations in a box on a page on our website, but what if I want to weave in dynamic recommendations elsewhere? When I search, I want the type ahead to automatically trigger fresh recommendations.
+
+### Backends for Frontends
+
+A common solution to the problem of chatty interfaces with backend services, or the need to vary content for different types of devices, is to have a server-side aggregation endpoint or API gateway. This can marshal multiple backend calls, vary and aggregate content if needed for different devices, and serve it up. I've seen this approach lead to disaster when these server-side endpoints become thick layers with too much behavior. They end up getting managed by separate teams, and being another place where logic has to change whenever some functionality changes.
+
+The problem that can occur is that normally we'll have one giant layer for all our services. This leads to every thing being thrown in together, and suddenly we start to lose isolation of our various user interfaces, limiting our ability to release them independently. A model I prefer and that I've seen work well is to restrict the use of these backends to one specific user interface or application.
+
+This pattern is sometimes referred to as backends for frontends \(BFFs\). It allows the team focusing on any given UI to also handle its own server-side components. You can see these backends as parts of the user interface that happen to be embedded in the server. Some types of UI may need a minimal server-side footprint, while others may need a lot more. If you need an API authentication and authorization layer, this can sit between our BFFs and our UIs.
+
+The danger with this approach is the same as with any aggregating layer; it can take on  logic it shouldn't. The business logic for the various capabilities these backends use should stay in the services themselves. 
+
+### A Hybrid Approach
+
+Many of the aforementioned options don't need to be one-size-fits-all. I could see an organization adopting the approach of fragment-based assembly to create a website, but using a backends-for-frontends approach when it comes to its mobile application. The key point is that we need to retain cohesion of the underlying capabilities that we offer out users. We nned to ensure that logic associated with ordering music or changing customer details lives inside those services that handle those operations, and does't get smeared all over our system. 
 
