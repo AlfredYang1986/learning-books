@@ -335,3 +335,39 @@ The danger with this approach is the same as with any aggregating layer; it can 
 
 Many of the aforementioned options don't need to be one-size-fits-all. I could see an organization adopting the approach of fragment-based assembly to create a website, but using a backends-for-frontends approach when it comes to its mobile application. The key point is that we need to retain cohesion of the underlying capabilities that we offer out users. We nned to ensure that logic associated with ordering music or changing customer details lives inside those services that handle those operations, and does't get smeared all over our system. 
 
+## Integrating with Third-Party Software
+
+Nonetheless, even if you are an organization with the ability to create a significant amount of custom software, you'll still use software products provided by external parties.
+
+First, your organization almost certainly has a greater demand for software than can be satisfied internally. Think of all the products you use, from office productivity tools like Excel to operation systems to payroll systems. Second, and most important, it wouldn't be cost effective! The cost for you to build your own email system, is likely to dwarf the cost of using an existing combination of mail server and client, even if you go for commercial options.
+
+### Lack of Control
+
+One challenge associated with integrating with and extending the capabilities of COSTS products like CMS or SaaS tool is that typically many of the technical decisions have been made for you. 
+
+### Customization
+
+Many tools that enterprise organizations purchase sell themselves on their ability to be heavily customized just for you. Beware! Often, due to the nature of the tool chain you have access to, the cost of customization can be more expensive than building something bespoke from scratch! If you've decided to buy a product but the particular capabilities it organization works rather than embark on complex customization.
+
+### Integration Spaghetti
+
+Another challenge is how you integrate with the tool. As we discussed earlier, thinking carefully about how you integrate between services is important, and ideally you want to standardize on a small number of types of integration. But if one product decides to use a proprietary binary protocol, another some flavor of SOAP, and another XML-RPC, what are you left with?
+
+### The Strangler Pattern
+
+When it comes to legacy or even CSTS platforms that aren't totally under our control, we also have to deal with what happens when we want to remove them or at least move away from them. A useful pattern here is the Strangler Application Pattern. Much like with our example of fronting the CMS system with our own code, with a strangler you capture and intercept calls to the old system. This allows you to decide if you route these calls to existing, legacy code, or direct them to new code you may have written. This allows you to replace functionality over time without requiring a big bang rewrite.
+
+When it comes to microservices, rather than having a single monolithic application intercepting all calls to the existing legacy system, you may instead use a series of microservices to perform this interception. Capturing and redirecting the original calls can become more complex in this situation, and you may require the use of a proxy to do this for you.
+
+## Summary
+
+Avoid database integration at all costs
+
+Understand the trade-offs between REST and RPC, but strongly consider REST as a good starting point for request/response integration
+
+Prefer choreography over orchestration
+
+Avoid breaking changes and need to version by understanding Postel's Law and using tolerant readers
+
+Think of user interfaces as compositional layers
+
