@@ -100,5 +100,71 @@ But if we have pulled apart the schema into two separate schemas, one for custom
 
 ### Try Again Later
 
+The fact that the order was captured and placed might be enough for us, and we may decide to retry the insertion into the warehouse's picking table at a later date. We could queue up this part of the operation in a queue or log file, and try again later. For some sort of operations this makes sense, but we have to assume that a retry would fix it.
+
+In many ways, this is another form of what is called eventual consistency. Rather than using a transactional boundary to ensure that the system is in a consistent state when the transaction completes, instead we accept that the system will get itself into a consistent state at some point int the future. This approach is especially useful with business operations that might be long-lived.
+
+### About the Entire Operation
+
+Another option is to reject the entire operation. In this case, we have to put the system back into a consistent state. The picking table is easy, as that insert failed, but we have a committed transaction in the order table. We need to unwind this. What we have to do is issue a compensation transaction, kicking off a new transaction to wind back what just happened. For us, that could be something as simple as issuing a DELETE statement to remove the order from the database. Then we'd also need to report back via the UI that the operation failed. Our application could handle both aspects within a monolithic system, but we'd have to consider what we could do when we split up the application code. Does the logic to handle the compensating transaction live in the customer service, the order service, or somewhere else?
+
+But what happens if your compensating transaction fails? It's certainly possible. Then we'd have an order in the order table with no matching pick instruction. In this situation, you'd either need to retry the compensating transaction. or allow some backend process to clean up the inconsistency later on. This could be something as simple as a maintenance screen that admin staff had access to, or an automated process.
+
+Now think about what happens if we have not one or two operations we want to be consistent, but three, four, or five. Handling compensating transactions for each failure mode becomes quite challenging to comprehend, let along implement.
+
+### Distributed Transactions
+
+An alternative to manually orchestrating compensating transactions is to use a distributed transaction. Distributed transactions try to span multiple transactions within them, using some overall governing process called a transaction manager to orchestrate the various transactions being done by underlying systems. Just as with a normal transaction a distributed transaction tries to ensure that everything remains in a consistent state, only in this case it tries to do so across multiple different systems running in different processes often communicating across network boundaries.
+
+The most common algorithm for handling distributed transactions ---- especially short-lived transactions, as in the case of handling our customer order ---- is to use a two-phase commit. Wiht a two-phase commit, first comes the voting phase. This is where each participant \(also called a cohort in this context\) in the distributed transaction tells the transaction manager whether it thinks tis local transaction can go ahead. If the transaction manager gets a yes vote form all participants, then it tell s them all to go ahead and perform their commits. A single no vote from all participants to send our a rollback to all parties.
+
+This approach relies on all parties halting until the central coordinating process tells them to proceed. This means we are vulnerable to outages. If the transaction manager goes down, the pending transactions never complete. If a cohort fails to respond during voting, everything blocks. And there is also the case of what happens if a commit fails after voting.There is an assumption implicit in this algorithm that this cannot happen: if cohort says yes during the voting period, then we have to assume ti will commit. Cohorts need a way of making this commit work at some point. This means this algorithm isn't foolproof ---- rather, it just tries to catch most failure cases.
+
+This coordination process also mean locks; that is, pending transactions can hold locks on resources. Locks on resources can lead to contention, making scaling system much more difficult, especially in the context of distributed systems.
+
+Distributed transactions have been implemented for specific technology stacks, such as Java's Transaction API, allowing for disparate resources like a database and a messages queue to all participate in the same, overarching transaction. The various algorithms are hard to get right, so I'd suggest you avoid trying to create your own. Instead, do lots of research on this topic if this seems like the route you want to take, and see if you can use an existing implementation.
+
+### So What to Do ?
+
+All of these solutions add complexity. As you can see, distributed transactions are hard to get right and can actually inhibit scaling. Systems that eventually converge through compensating retry logic can be harder to reason about, and may need other compensating behavior to fix up inconsistencies in data.
+
+When you encounter business operations that currently occur within a single transaction ask yourself if they really need to. Can they happen in different, local transactions, and rely on the concept of eventual consistency.
+
+If you do encounter state that really, really wants to be kept consistent, do every thing you can to avoid splitting ti up in the first place. Try really hard. if you really need to go ahead with the split, thing about moving from a purely technical view of the process and actually create a concrete concept to represent the transaction itself. This gives you a handle, or a hook, on which to run other operations like compensating transactions, and a way to monitor and manage these more complex concepts in your system. 
+
+## Reporting
+
+As we've already seen, in splitting a service into smaller parts, we need to also potentially split up how an where data is stored. This creates a problem, however, when it comes to on vital and common use case: reporting.
+
+A change in architecture as fundamental as moving to a microservices architecture will cause a lot of disruption, but it doesn't mean we have to abandon everything we do. The audience of our reporting system are users like any other, and we need to consider their needs. it would be arrogant to fundamentally change our architecture and just ask them to adapt. While I'm not suggesting that the space of reporting isn't ripe for disruption ---- it certainly is --- thiere is value in determining how to work with existing processes first.
+
+## The Reporting Database
+
+Reporting typically needs to group together data from across multiple parts of our organization in order to generate useful output. For example, we might want to enrich the data from our general ledger with descriptions of what was sold, which we get from a catalog. Or we might want to look at the shopping behavior of specific, high-value customers, which could require information form their purchase history and their customer profile.
+
+In a standard, monolithic service architecture, all our data is stored in one big database. This means all the data is in one place, so reporting across all this information is actually pretty easy, as we can simple join across the data via SQL queries or the like. Typically we won't run these report on the main database for fear of the load generated by our queries impacting the performance of the main system, so often these reporting systems hang on a read replica.
+
+With this approach we have one sizable upside ---- that all the data is already in one place, so we can use fairly straightforward tools to query it. But there are also a couple of downsides with this approach. First, the schema of the database is new effectively a shared API between the running monolithic services and any reporting system. So a change in schema has to be carefully managed. In reality, this is another impediment that reduces the chances of anyone wanting to take on the task of making and coordinating such a change.
+
+Finally, the database options available to us have exploded recently. While standard relational databases expose SQL query interfaces that work with many reporting tools. they aren't always the best option for storing data for our running service. What if your application data is better modeled as a graph? Or what if we'd rather use a document store like MongoDB? Likewise, what if we wanted to explore using a column-oriented database like Cassandra for our reporting system, Which makes it much easier to scale for larger volumes Being constrained in having to have one database for both purposes results in us often not being able to make these choices and explore new options.
+
+So it's not perfect, but it works \(mostly\). Now if our information is stored in multiple different system, what do we do? Is there a way for us to bring all the data together to run our reports? And could we also potentially find away to eliminate some of the downsides associated with the standard reporting database model?
+
+## Data Retrieval via Service Calls
+
+There are many variants of this model, but they all rely on pulling the required data from the source system via API calls. For a very simple reporting system, like a dashboard that might just want to show the number of orders placed in the last 15 minutes, this might be fine.To report across data from two or more system, you need to make multiple call to assemble this data.
+
+This approach breaks down rapidly with use cases that require larger volumes of data, however. Imagine a use case where we want to report on customer purchasing behavior for our music shop over the last 24 months, looking ar various trends in customer behavior and how this haas impacted on revenue. We need to pull large volumes of data from at least system is dangerous, as we may not know if it has changed, so to generate an accurate report we need all of the finance and customer record for the last two years. With even modest numbers of customers, you can see that this quickly will become a very slow operation..
+
+Reporting systems also often rely on third-party tools that expect to retrieve data in a certain way, and here providing a SQL interface is the fastest way to ensure your reporting tool chain is as easy to integrate with as possible. We could still use this approach to pull data periodically into a SQL database, of course, but this still presents us with some challenges.
+
+One of the key challenges is that the APIs exposed by the various microservices may well not be designed for reporting use cases. For example, a customer service may allow us to find customer by an ID, or search for a customer by various fields, but wouldn't necessarily expose an API to retrieve all customers. This could lead to many call being made to retrieve all the data ---- for example, having to iterate through a list of all the customers, making a separate call for each one. Not only could this be inefficient for the reporting system, it could generate load for the service in question too.
+
+While we could speed up some of the data retrieval by adding cache headers to the resources exposed by our service, and have this data cached in something like a reverse proxy, the nature of reporting is often that we access the long tail of data. This means that we may well request resources that no one else has requested before, resulting in a potentially expensive cache miss.
+
+You could resolve this by exposing batch APIs to make reporting easier. For example our customer service could allow you to pass a list of customer IDs to it to retrieve them in batches, or may even expose an interface that lets you page through all the customers. A more extreme version of this is to model the batch request as a resource in its own right. For example, the customer service might expose something like a BatchCustomerExport resource endpoint.
+
+## Data Pumps
+
 
 
