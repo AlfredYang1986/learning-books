@@ -166,5 +166,11 @@ You could resolve this by exposing batch APIs to make reporting easier. For exam
 
 ## Data Pumps
 
+Rather than have the reporting system pull the data, we could instead have the data pushed to the reporting system. One of the downside of retrieving the data by standard HTTP calls is the overhead of HTTP when we're making a large number of calls, together with the overhead of having to create APIs that may exist only for reporting purposes. An alternative option is to have a standalong program that directly accesses the database of the service that is the source of data, and pumps it into a reporting database.
+
+To start with, the data pump should be build and managed by the same team that manages the service. This can be something as simple as a command-line program triggered via Cron. This program needs to have intimate knowledge of both the internal database for the service, and also the reporting schema. The pump's job is to map one from the other. We try to reduce the problems with coupling to the service's schema by having the same team that manages the service also manage the pump. I would suggest, in fact, that you version control these together, and have builds of the data pump created as an additional artifact as part of the build of the service itself, with the assumption that whenever you deploy one of them, you deploy them both.
+
+### Alternative Destinations
+
 
 
