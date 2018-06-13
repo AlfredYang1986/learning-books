@@ -172,5 +172,21 @@ To start with, the data pump should be build and managed by the same team that m
 
 ### Alternative Destinations
 
+## Event Data Pump
+
+We touched on the idea of microservices emitting events bases on the state change of entities that they manage. 
+
+The coupling on the underlying database of the source microservice is new avoided. Instead, we are just binding to the events emitted by the  services, which are designed to be exposed to external consumers. Given that events are temporal in nature, it also makes it easier for us to smarter in what data we sent to our central repporting store; we can send data to the reporting system as we see an event, allowing data to flow faster to our reporting system, rather than relying on a regular schedule as with the data pump.
+
+Also, if we store which events have already been processed, we can just process the new events as they arrive, assuming the old events have already been mapped into the reporting system. This means our insertion will be more efficient, as we only need to send deltas. We can do similar things with a data pump, but we have to manage this our selves, whereas the fundamentally temporal nature of the stream of events helps us greatly.
+
+As our event data pump is less coupled to the internals of the service, it is also easier to consider this being managed by a separate group from the team looking after the microservice itself. As longas the nature of our event stream doesn't overly couple subscribers to changes in the service, this event mapper can evolve indenpendently of the service it subscribes to
+
+The main downsides to this approach are that all the requiered information must be broadcast as events, and it may not scale as well as a data pump for larger volumes of data that has the benefit of operating directly at the database level. 
+
+## Backup Data Pump
+
+This option is based on an approach used at Netflix, which takes advantage of existing backup solutions and also resolves some scale issues. In some ways, you can consider this a special case of a data pump, but it seemed like such an interesting solution that it deserves inclusion.
+
 
 
