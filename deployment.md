@@ -32,5 +32,23 @@ A passing green build means our changes have safely been integrated. A red build
 
 ## Mapping Continuous Integration to Microservices
 
+When thinking about microservices and continuous integration, we need to think about how our CI builds map to individual microservices. As I have said many times, we want to ensure that we can make a change to single service and deploy it independently of the rest. With this in mind, how should we map individual microservices to CI builds and source code?
 
+If we start with the simplest option, we could lump everything in together. We have a single, giant repository storing all our code, and have one single build. Any check-in to this source code repository will cause our build to trigger, where we will run all the verification steps associated with all out microservices, and produce multiple artifacts, all tied back to the same build.
+
+This seems much simpler on the surface than other approaches: fewer repositories to worry about, and a conceptually simpler build. From a developer point of view, things are pretty straightforward too. I just check code in. If i have to work on multiple services at once, I just have to worry about one commit.
+
+This model can work perfectly well if you buy into the idea of lock-step releases, where you don't mind deploying multiple services at once. In general, this is absolutely a pattern to avoid, but very early on in a project, especially if only one team is working on everything, this might make sense for short periods of time.
+
+However, there are some signigicant downsides. If I make a one-line change to a single service, changing the behavior in the user service, all the other service get verified and built. This could take more time than needed. This impacts our cycle time, the speed at which we can move a single change from development to live. More troubling, though, is knowing what artifacts should or shouldn't be deployed. Do I new need to deploy all the build services to push my small change into production? It can be hard to tell; trying to guess which service really changed just by reading the commit messages is difficult.Organizations using this approach often fall back to just deploying everything together, which we really want to avoid.
+
+Furthermore, if my one-line change to the user service breaks the build, no other changes can be made to the other services until that break is fixed. And think about a scenario where you have multiple teams all sharing this giant build. Who is in charge?
+
+A variation of this approach is to have one single source tree with all of the code in it, with multiple CI builds mapping to parts of this source tree. With well-defined structure, you can easily map the builds to certain parts of the source tree. In general, I amp not a fan of this approach, as this model can be a mixed blessing. On the one hand, my check-in/check-out process can be simpler as I have only one repository to worry about. On the other hand, it becomes very easy to get into the habit of checking in source code for multiple services at once, which can make it equally easy to slip into making changes that couple services together. I would gereatly prefer this approach, however, over having a single build for multiple services.
+
+So is there another alternative? The approach I prefer is to have a single CI build per microservice, to allow us to quickly make and validate a change prior to deployment into production. Here each microservice has its own source code repository, mapped to its own CI build. When making a change, I run only the build and tests I need to. I get a single artifact to deploy. Alignment to team ownership is more clear too. If you own the service, you own the repository and the build. Making changes across repositories can be more difficult in this world, but I'd maintain this is easier to resolve than the downside of the monolithic source control and build process.
+
+## Build Pipelines and Continuous Delivery
+
+Very early on in using continuous integration, we realized the value in sometimes having multiple stages inside a build. Tests are a very common case where this comes into play. I may have a lot of fast, small-scoped tests, and a small number of large-scoped, slow tests.
 
