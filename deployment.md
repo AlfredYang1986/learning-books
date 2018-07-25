@@ -50,5 +50,33 @@ So is there another alternative? The approach I prefer is to have a single CI bu
 
 ## Build Pipelines and Continuous Delivery
 
-Very early on in using continuous integration, we realized the value in sometimes having multiple stages inside a build. Tests are a very common case where this comes into play. I may have a lot of fast, small-scoped tests, and a small number of large-scoped, slow tests.
+Very early on in using continuous integration, we realized the value in sometimes having multiple stages inside a build. Tests are a very common case where this comes into play. I may have a lot of fast, small-scoped tests, and a small number of large-scoped, slow tests. If we run all the tests together, we may not be able to get fast feedback when your fast test fail if we're waiting for our long-scoped slow tests to finally finish. And if the fast tests fail, there probably isn't much sense in running the slower tests anyway! A solution to this problem is to have different stages in our build, creating what is known as a build pipeline. One stage for the faster tests, one for the slower tests.
+
+This build pipiline concept gives us a nice way of tracking the progress of our software as it clears each stage, helping give us insight into the quality of our software. We build our artifact, and that artifact is used throughout the pipeline. As our artifact moves through these stages, we feel more and more confident that the software will work in production.
+
+Continuous delivery \(CD\) builds on this concept, and then some, which is the approach whereby we get constant feedback on the production readiness of each and every check-in and furthermore treat each and every check-in as a release candidate.
+
+To fully embrace this concept, we need to model all the processes involved in getting our software from check-in to production, and know where any given version of the software is in terms of being cleared for release. 
+
+![](.gitbook/assets/screen-shot-2018-07-25-at-8.35.45-am.png)
+
+Here we really want a tool that embraces CD as a first-class concept. I have seen many people try to hack and extend CI tools to make them do CD, often resulting in complex systems that are nowhere as easy to use as tools that build in CD from the beginning. Tools that fully support CD allow you to define and visualize these pipelines, modeling the entire path to production for your software. 
+
+By modeling the entire path to production for our software, we greatly improve visibility of the quality of our soft ware, and can also greatly reduce the time taken between releases, as we have one place to observe our build and release process, and an obvious focal point fro introducing improvements.
+
+In a microservices world, where we want to ensure we can release our service independently of each other, it follows that as with CI, we'll want one pieline per service. In our pipelines, it is an artifact that we want to create and move through our path to production. As always, it turns out our artifacts can come in lots of sizes and shapes. 
+
+### And the Inevitable Exceptions
+
+As with all good rules, there are exceptions we need to consider too. The "one microservice per build" approach is absolutely something you should aim for,  but are there times when something else makes sense? When a team is starting our with a new project especially a green field one where they are working with a blank sheet of paper, it is quite likely that there will be a large amount of churn in terms of working our where the service boundaries lie. This is a good reason, in fact, for keeping your initial services on the larger side until your understanding of the domain stabilizes.
+
+During this time of churn, changes across service boundaries are more likely, and what is in or not in a given service is likely to change frequently. During this period, having all service in a single build to reduce the cost of cross-service changes may make sense.
+
+It does follow, though, that in this case you need to buy into releasing all the services as a bundle. It also absolutely needs to be a transitionary step. As service APIs stabilize, start moving them out into their own builds. If after a few weeks \(or a very small number of months\) you are unable to get stability in service boundaries in order to properly sepqrte them, merge them back in to a more monolithic service and give yourself tiem to get to grips with the domain.
+
+## Platform-Specific Artifacts
+
+Most technology stacks have some sort of first-class artifact, along with tools to support creating and installing them. From the point of view of a microservice, though, depending on your technology stack, this artifact may not be enough by itself. So we may need some way of installing and configuring other software that we need in order to deploy and lunch our artifacts. 
+
+Another downfall hre is that these artifacts are 
 
