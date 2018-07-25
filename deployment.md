@@ -78,5 +78,11 @@ It does follow, though, that in this case you need to buy into releasing all the
 
 Most technology stacks have some sort of first-class artifact, along with tools to support creating and installing them. From the point of view of a microservice, though, depending on your technology stack, this artifact may not be enough by itself. So we may need some way of installing and configuring other software that we need in order to deploy and lunch our artifacts. 
 
-Another downfall hre is that these artifacts are 
+Another downfall here is that these artifacts are specific to a certain technology stack, which may make deployment more difficult when we have a mix of technologies in play. Think of it from the point of view of someone trying to deploy multiple services together. They could be a developer or tester wanting to test some functionality, or it could be some one managing a production deployment. Now imagine that those services use three completely different deployment mechanisms. 
+
+Automation can go a long way toward hiding the differences in the deployment 
+
+## Operating System Artifacts
+
+One way to avoid the problems associated with technology-specific artifacts is to create artifacts that are native  to the underlying operating system. The advantage of using OS-specific artifacts is that from a deployment point of view we don't care what the underlying technology is. We just use the tools native to the OS to install the package. The OS tools can also help us uninstall and get information about the package too, and may even provide package reposistories that our CI tools can push to . much of the work done by the OS package manager can also
 
